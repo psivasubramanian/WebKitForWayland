@@ -254,6 +254,10 @@ void MediaPlayerPrivateGStreamer::load(const String& urlString)
 
     m_url = URL(URL(), cleanURL);
 
+#if USE(FUSION_API_GSTREAMER)
+    // TODO: invoke load(m_url.string().utf8().data()).
+#endif
+
     if (m_url.protocolIsInHTTPFamily())
         m_url.setProtocol("webkit+" + m_url.protocol());
 
@@ -1455,6 +1459,10 @@ void MediaPlayerPrivateGStreamer::cancelLoad()
 {
     if (m_networkState < MediaPlayer::Loading || m_networkState == MediaPlayer::Loaded)
         return;
+
+#if USE(FUSION_API_GSTREAMER)
+    // TODO: invoke cancel()
+#endif
 
     if (m_pipeline)
         changePipelineState(GST_STATE_READY);
