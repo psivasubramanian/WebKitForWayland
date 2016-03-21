@@ -1779,6 +1779,10 @@ void MediaPlayerPrivateGStreamer::didEnd()
         changePipelineState(GST_STATE_READY);
         m_downloadFinished = false;
     }
+
+#if USE(FUSION_API_GSTREAMER)
+    // TODO: invoke cancel()
+#endif
 }
 
 void MediaPlayerPrivateGStreamer::cacheDuration()
