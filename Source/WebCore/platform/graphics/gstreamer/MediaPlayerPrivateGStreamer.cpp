@@ -395,6 +395,20 @@ float MediaPlayerPrivateGStreamer::playbackPosition() const
         result = m_seekTime;
     }
 #endif
+#if USE(FUSION_SINK)
+    gint64 currentPts = -1;
+    GstElement* videoDec = gst_bin_get_by_name(GST_BIN(m_pipeline.get()), "sink");
+    if (videoDec) {
+        g_object_get(videoDec, "video-pts", &currentPts, NULL);
+    }
+    if (currentPts > 0) {
+        result = (static_cast<double>(currentPts * GST_MSECOND) / 45) / GST_SECOND;
+    }
+    if (result == 0 && m_seekTime != 0) {
+        result = m_seekTime;
+    }
+    gst_object_unref(videoDec);
+#endif
 
     LOG_MEDIA_MESSAGE("Position %" GST_TIME_FORMAT, GST_TIME_ARGS(position));
 
