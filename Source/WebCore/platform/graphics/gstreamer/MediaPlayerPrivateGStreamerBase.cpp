@@ -340,8 +340,9 @@ void MediaPlayerPrivateGStreamerBase::setPipeline(GstElement* pipeline)
     if(!sinkElement)
         return;
     // FIXME: handle empty size.
-    g_object_set(sinkElement, "left", m_position.x(), "top", m_position.y(), "width", 1920, "height", 1080, NULL);
-    // g_object_set(sinkElement, "left", m_position.x(), "top", m_position.y(), "width", m_size.width(), "height", m_size.height(), NULL);
+    //g_object_set(sinkElement, "left", m_position.x(), "top", m_position.y(), "width", 1920, "height", 1080, NULL);
+    g_object_set(sinkElement, "left", m_position.x(), "top", m_position.y(), "width", m_size.width(), "height", m_size.height(), NULL);
+    gst_object_unref(sinkElement);
 #endif
 #endif
 }
@@ -860,6 +861,14 @@ void MediaPlayerPrivateGStreamerBase::setSize(const IntSize& size)
 
     INFO_MEDIA_MESSAGE("Setting size to %dx%d", size.width(), size.height());
     m_size = size;
+
+#if USE(FUSION_SINK)
+    GstElement* sinkElement = gst_bin_get_by_name(GST_BIN(m_pipeline.get()), "sink");
+    if(!sinkElement)
+        return;
+    g_object_set(sinkElement, "width", m_size.width(), "height", m_size.height(), NULL);
+    gst_object_unref(sinkElement);
+#endif
 }
 
 void MediaPlayerPrivateGStreamerBase::setPosition(const IntPoint& position)
@@ -889,6 +898,7 @@ void MediaPlayerPrivateGStreamerBase::setPosition(const IntPoint& position)
     if(!sinkElement)
         return;
     g_object_set(sinkElement, "left", m_position.x(), "top", m_position.y(), "width", m_size.width(), "height", m_size.height(), NULL);
+    gst_object_unref(sinkElement);
 #endif
 
 }

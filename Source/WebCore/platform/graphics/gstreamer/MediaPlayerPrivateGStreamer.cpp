@@ -265,6 +265,7 @@ void MediaPlayerPrivateGStreamer::load(const String& urlString)
 #if USE(FUSION_SINK)
     GstElement* src = gst_bin_get_by_name(GST_BIN(m_pipeline.get()), "src");
     g_object_set(src, "location", m_url.string().utf8().data(), nullptr);
+    gst_object_unref(src);
 #else
     g_object_set(m_pipeline.get(), "uri", m_url.string().utf8().data(), nullptr);
 #endif
