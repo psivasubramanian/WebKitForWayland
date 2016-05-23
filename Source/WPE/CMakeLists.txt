@@ -44,13 +44,13 @@ if (USE_WPE_BACKEND_INTEL_CE)
     add_definitions(-DWPE_BACKEND_INTEL_CE=1)
 endif ()
 
+if (USE_WPE_BACKEND_STM)
+    add_definitions(-DWPE_BACKEND_STM=1)
+endif ()
+
 if (USE_WPE_BACKEND_WESTEROS)
     find_package(westeros REQUIRED)
     add_definitions(-DWPE_BACKEND_WESTEROS=1)
-endif ()
-
-if (USE_WPE_BACKEND_WINDOWLESS)
-    add_definitions(-DWPE_BACKEND_WINDOWLESS=1)
 endif ()
 
 if (USE_WPE_BUFFER_MANAGEMENT_GBM)
@@ -75,6 +75,7 @@ set(WPE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Graphics/GBM"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Graphics/IntelCE"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Graphics/Westeros"
+    "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Graphics/STM"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Input"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Pasteboard"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/Pasteboard"
@@ -88,7 +89,7 @@ set(WPE_INCLUDE_DIRECTORIES
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/ViewBackend/Wayland"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/ViewBackend/Wayland/Protocols"
     "${CMAKE_SOURCE_DIR}/Source/WPE/Source/ViewBackend/Westeros"
-    "${CMAKE_SOURCE_DIR}/Source/WPE/Source/ViewBackend/Windowless"
+    "${CMAKE_SOURCE_DIR}/Source/WPE/Source/ViewBackend/STM"
     ${BCM_HOST_INCLUDE_DIRS}
     ${GDL_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
@@ -146,6 +147,7 @@ if (USE_WPE_BACKEND_BCM_RPI)
 
         Source/ViewBackend/BCMRPi/ViewBackendBCMRPi.cpp
     )
+    list(APPEND WPE_LIBRARIES nxclient)
 endif ()
 
 if (USE_WPE_BACKEND_INTEL_CE)
@@ -182,14 +184,20 @@ if (USE_WPE_BACKEND_WESTEROS)
     )
 endif ()
 
-if (USE_WPE_BACKEND_WINDOWLESS)
+if (USE_WPE_BACKEND_STM)
+     list(APPEND WPE_INCLUDE_DIRECTORIES
+        ${STM_INCLUDE_DIRS}
+        ${STMEGL_INCLUDE_DIRS}
+     )
+     list(APPEND WPE_LIBRARIES
+        ${STM_LIBRARIES}
+        ${STMEGL_LIBRARIES}
+     )
      list(APPEND WPE_SOURCES
-        Source/Graphics/Westeros/RenderingBackendWesteros.cpp
-
-        Source/ViewBackend/Westeros/ViewBackendWesteros.cpp
-        Source/ViewBackend/Westeros/WesterosViewbackendInput.cpp
-        Source/ViewBackend/Windowless/ViewBackendWindowless.cpp
-   )
+        Source/Graphics/STM/RenderingBackendSTM.cpp
+        Source/Graphics/RenderingBackend.cpp
+        Source/ViewBackend/STM/ViewBackendSTM.cpp
+     )
 endif ()
 
 if (USE_WPE_BUFFER_MANAGEMENT_GBM)
