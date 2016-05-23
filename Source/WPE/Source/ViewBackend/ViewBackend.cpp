@@ -31,9 +31,7 @@
 #include "ViewBackendBCMRPi.h"
 #include "ViewBackendIntelCE.h"
 #include "ViewBackendWesteros.h"
-#if WPE_BACKEND(WINDOWLESS)
-#include "ViewBackendWindowless.h"
-#endif
+#include "ViewBackendSTM.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -83,9 +81,9 @@ std::unique_ptr<ViewBackend> ViewBackend::create()
         return std::unique_ptr<ViewBackendWesteros>(new ViewBackendWesteros);
 #endif
 
-#if WPE_BACKEND(WINDOWLESS)
-        if (!backendEnv || !std::strcmp(backendEnv, "windowless"))
-        return std::unique_ptr<ViewBackendWindowless>(new ViewBackendWindowless);
+#if WPE_BACKEND(STM)
+    if (!backendEnv || !std::strcmp(backendEnv, "stm"))
+        return std::unique_ptr<ViewBackendSTM>(new ViewBackendSTM);
 #endif
 
     fprintf(stderr, "ViewBackend: no usable backend found, will crash.\n");
@@ -101,6 +99,18 @@ void ViewBackend::setClient(Client*)
 }
 
 void ViewBackend::setInputClient(Input::Client*)
+{
+}
+
+void ViewBackend::handleKeyboardEvent(const Input::KeyboardEvent& event)
+{
+}
+
+void ViewBackend::handlePointerEvent(const Input::PointerEvent& event)
+{
+}
+
+void ViewBackend::handleAxisEvent(const Input::AxisEvent& event)
 {
 }
 
