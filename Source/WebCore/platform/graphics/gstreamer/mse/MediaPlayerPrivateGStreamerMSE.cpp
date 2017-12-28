@@ -54,6 +54,11 @@
 #include "PlayreadySession.h"
 #endif
 
+#if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(OPENCDM)
+#include "CDMPrivateOpenCDM.h"
+#include "CDMSessionOpenCDM.h"
+#endif
+
 static const char* dumpReadyState(WebCore::MediaPlayer::ReadyState readyState)
 {
     switch (readyState) {
@@ -812,12 +817,14 @@ FloatSize MediaPlayerPrivateGStreamerMSE::naturalSize() const
 MediaPlayer::SupportsType MediaPlayerPrivateGStreamerMSE::supportsType(const MediaEngineSupportParameters& parameters)
 {
     MediaPlayer::SupportsType result = MediaPlayer::IsNotSupported;
+    printf("MediaPlayerPrivateGStreamerMSE::supportsType\n");
     if (!parameters.isMediaSource)
         return result;
 
     // Disable VPX/Opus on MSE for now, mp4/avc1 seems way more reliable currently.
     if (parameters.type.endsWith("webm"))
-        return result;
+	//SIVA return MediaPlayer::IsSupported;	
+	return result;
 
     // YouTube TV provides empty types for some videos and we want to be selected as best media engine for them.
     if (parameters.type.isEmpty()) {
@@ -851,6 +858,7 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamerMSE::supportsType(const Med
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA_V1) || ENABLE(LEGACY_ENCRYPTED_MEDIA)
 void MediaPlayerPrivateGStreamerMSE::dispatchDecryptionKey(GstBuffer* buffer)
 {
+    printf("MediaPlayerPrivateGStreamerMSE::dispatchDecryptionKey \n");
     for (auto it : m_appendPipelinesMap)
         it.value->dispatchDecryptionKey(buffer);
 }
@@ -926,6 +934,27 @@ float MediaPlayerPrivateGStreamerMSE::maxTimeSeekable() const
 
     return result;
 }
+
+#if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(OPENCDM)
+void MediaPlayerPrivateGStreamerMSE::emitOpenCDMSession()
+{
+    CDMSessionOpenCDM* cdmSession = openCDMSession();
+
+    if (!cdmSession)
+        return;
+
+    const String& sessionId = cdmSession->sessionId();
+    if (sessionId.isEmpty())
+        return;
+
+    for (auto it : m_appendPipelinesMap) {
+            gst_element_send_event(it.value->pipeline(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB,
+                gst_structure_new("drm-session", "session", G_TYPE_STRING, sessionId.utf8().data(), nullptr)));
+            it.value->setAppendState(AppendPipeline::AppendState::Ongoing);
+    }
+    GST_DEBUG("emitted OpenCDM session on pipeline");
+}
+#endif
 
 } // namespace WebCore.
 

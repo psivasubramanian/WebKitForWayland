@@ -40,6 +40,11 @@
 #include "TextureMapperPlatformLayerProxy.h"
 #endif
 
+#if USE(OPENCDM)
+#include "CDMPrivateOpenCDM.h"
+#include "CDMSessionOpenCDM.h"
+#endif
+
 typedef struct _GstStreamVolume GstStreamVolume;
 typedef struct _GstVideoInfo GstVideoInfo;
 typedef struct _GstGLContext GstGLContext;
@@ -156,6 +161,7 @@ public:
 #endif
 
 #if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(OPENCDM)
+    CDMSessionOpenCDM* openCDMSession();
     virtual void emitOpenCDMSession();
     virtual void resetOpenCDMSession();
 #endif

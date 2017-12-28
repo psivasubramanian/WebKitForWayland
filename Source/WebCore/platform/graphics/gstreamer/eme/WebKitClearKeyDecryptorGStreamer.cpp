@@ -66,7 +66,7 @@ static void webkit_media_clear_key_decrypt_class_init(WebKitMediaClearKeyDecrypt
     gobjectClass->finalize = webKitMediaClearKeyDecryptorFinalize;
 
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
+//    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
     gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
 
     gst_element_class_set_static_metadata(elementClass,
@@ -171,6 +171,7 @@ static gboolean webKitMediaClearKeyDecryptorDecrypt(WebKitMediaCommonEncryptionD
         return false;
     }
 
+#if 1
     uint8_t ctr[CLEARKEY_SIZE];
     if (ivMap.size == 8) {
         memset(ctr + 8, 0, 8);
@@ -180,17 +181,22 @@ static gboolean webKitMediaClearKeyDecryptorDecrypt(WebKitMediaCommonEncryptionD
         memcpy(ctr, ivMap.data, CLEARKEY_SIZE);
     }
     gst_buffer_unmap(ivBuffer, &ivMap);
+#endif
 
     WebKitMediaClearKeyDecryptPrivate* priv = WEBKIT_MEDIA_CK_DECRYPT_GET_PRIVATE(WEBKIT_MEDIA_CK_DECRYPT(self));
+
+#if 1
     gcry_error_t error = gcry_cipher_setctr(priv->handle, ctr, CLEARKEY_SIZE);
     if (error) {
         GST_ERROR_OBJECT(self, "gcry_cipher_setctr failed: %s", gpg_strerror(error));
         return false;
     }
+#endif
 
     GstMapInfo map;
     gboolean bufferMapped = gst_buffer_map(buffer, &map, static_cast<GstMapFlags>(GST_MAP_READWRITE));
     if (!bufferMapped) {
+        gst_buffer_unmap(ivBuffer, &ivMap);
         GST_ERROR_OBJECT(self, "Failed to map buffer");
         return false;
     }

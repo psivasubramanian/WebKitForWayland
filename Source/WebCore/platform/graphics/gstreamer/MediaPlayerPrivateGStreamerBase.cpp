@@ -149,11 +149,17 @@ void registerWebKitGStreamerElements()
     if (!webkitGstCheckVersion(1, 6, 1))
         return;
 
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+#if 1
+    GRefPtr<GstElementFactory> clearKeyDecryptorFactory1 = gst_element_factory_find("webkitopencdm");
+    if (!clearKeyDecryptorFactory1)
+        gst_element_register(nullptr, "webkitopencdm", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_DECRYPT);
+#endif
+
+/*#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     GRefPtr<GstElementFactory> clearKeyDecryptorFactory = gst_element_factory_find("webkitclearkey");
     if (!clearKeyDecryptorFactory)
         gst_element_register(nullptr, "webkitclearkey", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_CK_DECRYPT);
-#endif
+#endif*/
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)
     GRefPtr<GstElementFactory> clearKeyDecryptorFactory = gst_element_factory_find("webkitclearkey");
@@ -1553,19 +1559,35 @@ void MediaPlayerPrivateGStreamerBase::emitPlayReadySession(PlayreadySession* ses
 #endif
 #endif // USE(PLAYREADY)
 
+//String sessionId;
 #if USE(OPENCDM)
+CDMSessionOpenCDM* MediaPlayerPrivateGStreamerBase::openCDMSession()
+{
+    if (!m_cdmSession)
+        return nullptr;
+
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    return static_cast<CDMSessionOpenCDM*>(m_cdmSession);
+#else
+    return static_cast<CDMSessionOpenCDM*>(m_cdmSession.get());
+#endif // ENABLE(LEGACY_ENCRYPTED_MEDIA)
+}
+
 void MediaPlayerPrivateGStreamerBase::emitOpenCDMSession()
 {
     if (!m_cdmSession)
         return;
+    GST_TRACE("m_cdmSession is not null");
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     CDMSessionOpenCDM* cdmSession = static_cast<CDMSessionOpenCDM*>(m_cdmSession);
 #else
     CDMSessionOpenCDM* cdmSession = static_cast<CDMSessionOpenCDM*>(m_cdmSession.get());
 #endif // ENABLE(LEGACY_ENCRYPTED_MEDIA)
     const String& sessionId = cdmSession->sessionId();
+//    sessionId = cdmSession->sessionId();
     if (sessionId.isEmpty())
         return;
+    GST_TRACE("sessionId is not null");
 
     bool eventHandled = gst_element_send_event(m_pipeline.get(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB,
         gst_structure_new("drm-session", "session", G_TYPE_STRING, sessionId.utf8().data(), nullptr)));
@@ -1624,8 +1646,8 @@ MediaPlayer::MediaKeyException MediaPlayerPrivateGStreamerBase::addKey(const Str
             return MediaPlayer::InvalidPlayerState;
         }
         emitOpenCDMSession();
-        m_player->keyAdded(keySystem, sessionID);
-        return MediaPlayer::NoError;
+//        m_player->keyAdded(keySystem, sessionID);
+//        return MediaPlayer::NoError;
     }
 #endif
     if (equalIgnoringASCIICase(keySystem, "org.w3.clearkey")) {
@@ -1865,8 +1887,29 @@ std::unique_ptr<CDMSession> MediaPlayerPrivateGStreamerBase::createSession(const
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA_V1) || ENABLE(LEGACY_ENCRYPTED_MEDIA)
 void MediaPlayerPrivateGStreamerBase::dispatchDecryptionKey(GstBuffer* buffer)
 {
+#if 0
+   if (m_cdmSession)
+   {
+    GST_TRACE("m_cdmSession is not null");
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    CDMSessionOpenCDM* cdmSession = static_cast<CDMSessionOpenCDM*>(m_cdmSession);
+#else
+    CDMSessionOpenCDM* cdmSession = static_cast<CDMSessionOpenCDM*>(m_cdmSession.get());
+#endif // ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    const String& sessionId = cdmSession->sessionId();
+    if (sessionId.isEmpty())
+        return;
+    GST_TRACE("sessionId is not empty");
+    GRefPtr<GstElement> pipeline = m_pipeline.get();
+
+    bool eventHandled = gst_element_send_event(pipeline.get(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB,
+        gst_structure_new("drm-session", "session", G_TYPE_STRING, sessionId.utf8().data(), nullptr)));
+    GST_TRACE("emitted OpenCDM session on pipeline, event handled %s", eventHandled ? "yes" : "no");
+//   }
+#endif
     gst_element_send_event(m_pipeline.get(), gst_event_new_custom(GST_EVENT_CUSTOM_DOWNSTREAM_OOB,
         gst_structure_new("drm-cipher", "key", GST_TYPE_BUFFER, buffer, nullptr)));
+
 }
 
 void MediaPlayerPrivateGStreamerBase::handleProtectionEvent(GstEvent* event, GstElement* element)
@@ -2051,10 +2094,13 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamerBase::extendedSupportsType(
     //    If keySystem is null, continue to the next step.
     if (parameters.keySystem.isNull() || parameters.keySystem.isEmpty())
         return result;
+//SIVA          return MediaPlayer::MayBeSupported;
 
     // If keySystem contains an unrecognized or unsupported Key System, return the empty string
     if (!supportsKeySystem(parameters.keySystem, String::format("%s; codecs=\"%s\"", parameters.type.utf8().data(), parameters.codecs.utf8().data())))
         result = MediaPlayer::IsNotSupported;
+    else
+        result = MediaPlayer::IsSupported;
 #else
     UNUSED_PARAM(parameters);
 #endif

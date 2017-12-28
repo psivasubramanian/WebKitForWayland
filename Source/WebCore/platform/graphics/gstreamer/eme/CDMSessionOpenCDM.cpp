@@ -50,13 +50,16 @@ CDMSessionOpenCDM::CDMSessionOpenCDM(CDMSessionClient*, media::OpenCdm* openCdm,
 
 RefPtr<Uint8Array> CDMSessionOpenCDM::generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationUrl, unsigned short& errorCode, uint32_t&)
 {
+    printf("CDMSessionOpenCDM::generateKeyRequest\n");
     if (m_eKeyState != KeyInit)
         return nullptr;
     m_playerPrivate->receivedGenerateKeyRequest(m_openCdmKeySystem);
-
+    printf("CDMSessionOpenCDM::generateKeyRequest calling createsession\n");
+//    std::string::size_type sz;
     std::string sessionId;
     m_openCdmSession->CreateSession(mimeType.utf8().data(), reinterpret_cast<unsigned char*>(initData->data()),
-        initData->length(), sessionId);
+        initData->length(), sessionId, 0);
+//        initData->length(), sessionId, std::stoi(m_openCdmKeySystem.utf8().data(),  nullptr, 10));
     if (!sessionId.size()) {
         GST_ERROR("SessionId is empty\n");
         return nullptr;
@@ -70,8 +73,11 @@ RefPtr<Uint8Array> CDMSessionOpenCDM::generateKeyRequest(const String& mimeType,
     int returnValue = m_openCdmSession->GetKeyMessage(message,
         &messageLength, temporaryUrl, &destinationUrlLength);
     if (returnValue || !messageLength || !destinationUrlLength) {
-        errorCode = WebKitMediaKeyError::MEDIA_KEYERR_UNKNOWN;
-        return nullptr;
+//        printf("CDMSessionOpenCDM::generateKeyRequest GetKeyMessage error\n");
+//        errorCode = WebKitMediaKeyError::MEDIA_KEYERR_UNKNOWN;
+//        return nullptr;
+        strcpy(reinterpret_cast<char *>(temporaryUrl), "http://people.linaro.org/license_server");
+        destinationUrlLength = strlen(reinterpret_cast<char *>(temporaryUrl));
     }
     printf("Key state set to PENDING \n");
     m_eKeyState = KeyPending;
@@ -89,6 +95,7 @@ bool CDMSessionOpenCDM::update(Uint8Array* key, RefPtr<Uint8Array>& nextMessage,
         return false;
 
     GST_MEMDUMP("License :", key->data(), key->length());
+    printf("License key: %x length: %d\n", key->data(), key->length());
 
     std::string responseMessage;
     if (m_openCdmSession->Update(key->data(), key->length(), responseMessage)) {
