@@ -288,6 +288,8 @@ static gboolean webkitMediaCommonEncryptionDecryptSinkEventHandler(GstBaseTransf
     WebKitMediaCommonEncryptionDecryptClass* klass = WEBKIT_MEDIA_CENC_DECRYPT_GET_CLASS(self);
     gboolean result = FALSE;
 
+    GST_DEBUG_OBJECT(self, "Event %d received\n", GST_EVENT_TYPE(event));
+
     switch (GST_EVENT_TYPE(event)) {
     case GST_EVENT_PROTECTION: {
         const char* systemId = nullptr;

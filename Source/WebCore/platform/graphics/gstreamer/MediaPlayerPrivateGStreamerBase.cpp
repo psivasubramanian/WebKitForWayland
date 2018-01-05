@@ -174,6 +174,9 @@ void registerWebKitGStreamerElements()
 #endif
 
 #if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(OPENCDM)
+    GRefPtr<GstElementFactory> openCDMDecryptorFactory = gst_element_factory_find("webkitopencdm");
+    if (!openCDMDecryptorFactory)
+        gst_element_register(0, "webkitopencdm", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_DECRYPT);
     GRefPtr<GstElementFactory> widevineDecryptorFactory = gst_element_factory_find("webkitopencdmwidevine");
     if (!widevineDecryptorFactory)
         gst_element_register(0, "webkitopencdmwidevine", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_WIDEVINE_DECRYPT);
@@ -1657,6 +1660,9 @@ MediaPlayer::MediaKeyException MediaPlayerPrivateGStreamerBase::addKey(const Str
             return MediaPlayer::InvalidPlayerState;
         }
         emitOpenCDMSession();
+        GstBuffer* buffer = gst_buffer_new_wrapped(g_memdup(keyData, keyLength), keyLength);
+        dispatchDecryptionKey(buffer);
+        gst_buffer_unref(buffer);
         m_player->keyAdded(keySystem, sessionID);
         return MediaPlayer::NoError;
     }
@@ -2088,6 +2094,8 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamerBase::extendedSupportsType(
     // If keySystem contains an unrecognized or unsupported Key System, return the empty string
     if (!supportsKeySystem(parameters.keySystem, String::format("%s; codecs=\"%s\"", parameters.type.utf8().data(), parameters.codecs.utf8().data())))
         result = MediaPlayer::IsNotSupported;
+    else
+        result = MediaPlayer::IsSupported;
 #else
     UNUSED_PARAM(parameters);
 #endif
