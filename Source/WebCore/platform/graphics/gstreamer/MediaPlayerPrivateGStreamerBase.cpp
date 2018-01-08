@@ -161,7 +161,7 @@ void registerWebKitGStreamerElements()
         gst_element_register(nullptr, "webkitclearkey", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_CK_DECRYPT);
 #endif
 
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA_V1) && !USE(OPENCDM)
     GRefPtr<GstElementFactory> clearKeyDecryptorFactory = gst_element_factory_find("webkitclearkey");
     if (!clearKeyDecryptorFactory)
         gst_element_register(0, "webkitclearkey", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_MEDIA_CK_DECRYPT);

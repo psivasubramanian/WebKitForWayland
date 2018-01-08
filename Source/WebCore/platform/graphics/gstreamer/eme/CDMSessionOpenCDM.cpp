@@ -69,7 +69,7 @@ RefPtr<Uint8Array> CDMSessionOpenCDM::generateKeyRequest(const String& mimeType,
     int destinationUrlLength = 0;
     int returnValue = m_openCdmSession->GetKeyMessage(message,
         &messageLength, temporaryUrl, &destinationUrlLength);
-    if ((m_openCdmKeySystem.compare("org.w3.clearkey")) && (returnValue || !messageLength || !destinationUrlLength)) {
+    if ((!m_openCdmKeySystem.contains("org.w3.clearkey", true)) && (returnValue || !messageLength || !destinationUrlLength)) {
         errorCode = WebKitMediaKeyError::MEDIA_KEYERR_UNKNOWN;
         return nullptr;
     }
