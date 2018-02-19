@@ -29,6 +29,7 @@
 
 #include <open_cdm.h>
 #include <wtf/text/WTFString.h>
+#include "CDMPrivateOpenCDM.h"
 
 #define GST_WEBKIT_OPENCDM_DECRYPT_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), WEBKIT_TYPE_OPENCDM_DECRYPT, WebKitOpenCDMDecryptPrivate))
 
@@ -118,7 +119,7 @@ static gboolean webKitMediaOpenCDMDecryptorHandleKeyResponse(WebKitMediaCommonEn
       if (priv->m_session != temporarySession.get() ) {
         priv->m_session = temporarySession.get();
         GST_INFO_OBJECT(self, "selecting session %s", priv->m_session.utf8().data());
-        priv->m_openCdm = std::make_unique<media::OpenCdm>();
+        priv->m_openCdm = std::unique_ptr<media::OpenCdm>(WebCore::CDMPrivateOpenCDM::getOpenCdmInstance());
         priv->m_openCdm->SelectSession(priv->m_session.utf8().data());
       } else
           GST_INFO_OBJECT(self, "session %s already selected", priv->m_session.utf8().data());
