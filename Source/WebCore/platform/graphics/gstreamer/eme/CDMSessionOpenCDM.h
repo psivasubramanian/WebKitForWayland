@@ -66,9 +66,12 @@ public:
         unsigned short&, uint32_t&) override;
     bool keyRequested() const override { return m_eKeyState == KeyPending; }
     bool ready() const override { return m_eKeyState == KeyReady; }
-
+    inline const std::string& Message() const {
+         return (m_message);
+    }
 private:
     media::OpenCdm* m_openCdmSession;
+    std::string m_message;
     String m_sessionId;
     MediaPlayerPrivateGStreamerBase* m_playerPrivate;
     String m_openCdmKeySystem;
