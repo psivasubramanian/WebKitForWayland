@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "WebKitOpenCDMDecryptorGStreamer.h"
+#include "CDMPrivateOpenCDM.h"
 
 #if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(GSTREAMER) && USE(OPENCDM)
 
@@ -29,7 +30,6 @@
 
 #include <open_cdm.h>
 #include <wtf/text/WTFString.h>
-#include "CDMPrivateOpenCDM.h"
 
 #define GST_WEBKIT_OPENCDM_DECRYPT_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), WEBKIT_TYPE_OPENCDM_DECRYPT, WebKitOpenCDMDecryptPrivate))
 
@@ -65,8 +65,6 @@ static void webkit_media_opencdm_decrypt_class_init(WebKitOpenCDMDecryptClass* k
 
     GstElementClass* elementClass = GST_ELEMENT_CLASS(klass);
 
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&sinkTemplate));
-    gst_element_class_add_pad_template(elementClass, gst_static_pad_template_get(&srcTemplate));
 
     gst_element_class_set_static_metadata(elementClass,
         "Decrypt content with OpenCDM support",
@@ -78,7 +76,6 @@ static void webkit_media_opencdm_decrypt_class_init(WebKitOpenCDMDecryptClass* k
         "webkitopencdm", 0, "OpenCDM decryptor");
 
     WebKitMediaCommonEncryptionDecryptClass* cencClass = WEBKIT_MEDIA_CENC_DECRYPT_CLASS(klass);
-    cencClass->protectionSystemId = CLEAR_KEY_PROTECTION_SYSTEM_UUID;
     cencClass->handleKeyResponse = GST_DEBUG_FUNCPTR(webKitMediaOpenCDMDecryptorHandleKeyResponse);
     cencClass->decrypt = GST_DEBUG_FUNCPTR(webKitMediaOpenCDMDecryptorDecrypt);
 
@@ -107,10 +104,11 @@ static gboolean webKitMediaOpenCDMDecryptorHandleKeyResponse(WebKitMediaCommonEn
     if (gst_structure_has_name(structure, "drm-cipher"))
     {
       const GValue* value = gst_structure_get_value(structure,"key");
+      GST_TRACE("drm-cipher structure has key value %s", value);
     }
     else if (gst_structure_has_name(structure, "drm-session"))
     {
-      GST_WARNING_OBJECT(self, "drm-session event received\n");
+      GST_INFO_OBJECT(self, "drm-session event received\n");
       GUniqueOutPtr<char> temporarySession;
       gst_structure_get(structure, "session", G_TYPE_STRING, &temporarySession.outPtr(), nullptr);
       WebKitOpenCDMDecryptPrivate* priv = GST_WEBKIT_OPENCDM_DECRYPT_GET_PRIVATE(WEBKIT_OPENCDM_DECRYPT(self));
@@ -119,8 +117,10 @@ static gboolean webKitMediaOpenCDMDecryptorHandleKeyResponse(WebKitMediaCommonEn
       if (priv->m_session != temporarySession.get() ) {
         priv->m_session = temporarySession.get();
         GST_INFO_OBJECT(self, "selecting session %s", priv->m_session.utf8().data());
-        priv->m_openCdm = std::unique_ptr<media::OpenCdm>(WebCore::CDMPrivateOpenCDM::getOpenCdmInstance());
-        priv->m_openCdm->SelectSession(priv->m_session.utf8().data());
+        if (!priv->m_openCdm)
+            priv->m_openCdm = std::unique_ptr<media::OpenCdm>(WebCore::CDMPrivateOpenCDM::getOpenCdmInstance());
+        if (priv->m_openCdm)
+            priv->m_openCdm->SelectSession(priv->m_session.utf8().data());
       } else
           GST_INFO_OBJECT(self, "session %s already selected", priv->m_session.utf8().data());
     } else
