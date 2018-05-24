@@ -112,6 +112,7 @@
 #include "CDMSessionOpenCDM.h"
 #include "WebKitOpenCDMPlayReadyDecryptorGStreamer.h"
 #include "WebKitOpenCDMWidevineDecryptorGStreamer.h"
+#include "WebKitOpenCDMClearKeyDecryptorGStreamer.h"
 #endif // USE(OPENCDM)
 #if USE(PLAYREADY)
 #include "PlayreadySession.h"
@@ -174,15 +175,15 @@ void registerWebKitGStreamerElements()
 #endif
 
 #if (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(LEGACY_ENCRYPTED_MEDIA_V1)) && USE(OPENCDM)
-    GRefPtr<GstElementFactory> openCDMDecryptorFactory = gst_element_factory_find("webkitopencdm");
-    if (!openCDMDecryptorFactory)
-        gst_element_register(0, "webkitopencdm", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_DECRYPT);
     GRefPtr<GstElementFactory> widevineDecryptorFactory = gst_element_factory_find("webkitopencdmwidevine");
     if (!widevineDecryptorFactory)
         gst_element_register(0, "webkitopencdmwidevine", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_WIDEVINE_DECRYPT);
     GRefPtr<GstElementFactory> playReadyDecryptorFactory = gst_element_factory_find("webkitplayreadydec");
     if (!playReadyDecryptorFactory)
         gst_element_register(0, "webkitplayreadydec", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_PLAYREADY_DECRYPT);
+    GRefPtr<GstElementFactory> clearKeyDecryptorFactory = gst_element_factory_find("webkitopencdmclearkey");
+    if (!clearKeyDecryptorFactory)
+        gst_element_register(0, "webkitopencdmclearkey", GST_RANK_PRIMARY + 100, WEBKIT_TYPE_OPENCDM_CLEARKEY_DECRYPT);
 #endif
 }
 
@@ -1660,9 +1661,12 @@ MediaPlayer::MediaKeyException MediaPlayerPrivateGStreamerBase::addKey(const Str
             return MediaPlayer::InvalidPlayerState;
         }
         emitOpenCDMSession();
-        GstBuffer* buffer = gst_buffer_new_wrapped(g_memdup(keyData, keyLength), keyLength);
-        dispatchDecryptionKey(buffer);
-        gst_buffer_unref(buffer);
+
+        if (equalIgnoringASCIICase(keySystem, "org.w3.clearkey")) {
+            GstBuffer* buffer = gst_buffer_new_wrapped(g_memdup(keyData, keyLength), keyLength);
+            dispatchDecryptionKey(buffer);
+            gst_buffer_unref(buffer);
+        }
         m_player->keyAdded(keySystem, sessionID);
         return MediaPlayer::NoError;
     }
@@ -1927,7 +1931,7 @@ void MediaPlayerPrivateGStreamerBase::handleProtectionEvent(GstEvent* event, Gst
     GST_MEMDUMP("init datas", mapInfo.data, mapInfo.size);
 
     if (m_handledProtectionEvents.contains(GST_EVENT_SEQNUM(event))) {
-        GST_DEBUG("event %u already handled", GST_EVENT_SEQNUM(event));
+        GST_DEBUG("event %s, seq. no. %u already handled", GST_EVENT_TYPE_NAME(event), GST_EVENT_SEQNUM(event));
         m_handledProtectionEvents.remove(GST_EVENT_SEQNUM(event));
         return;
     }

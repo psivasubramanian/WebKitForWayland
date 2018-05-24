@@ -173,6 +173,7 @@ if (ENABLE_LEGACY_ENCRYPTED_MEDIA_V1 OR ENABLE_LEGACY_ENCRYPTED_MEDIA OR ENABLE_
             platform/graphics/gstreamer/eme/WebKitOpenCDMDecryptorGStreamer.cpp
             platform/graphics/gstreamer/eme/WebKitOpenCDMPlayReadyDecryptorGStreamer.cpp
             platform/graphics/gstreamer/eme/WebKitOpenCDMWidevineDecryptorGStreamer.cpp
+            platform/graphics/gstreamer/eme/WebKitOpenCDMClearKeyDecryptorGStreamer.cpp
         )
     endif ()
 endif ()
