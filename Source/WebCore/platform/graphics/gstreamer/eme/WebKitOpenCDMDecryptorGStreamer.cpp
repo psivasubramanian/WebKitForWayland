@@ -88,21 +88,33 @@ static void webKitMediaOpenCDMDecryptorFinalize(GObject* object)
 static gboolean webKitMediaOpenCDMDecryptorHandleKeyResponse(WebKitMediaCommonEncryptionDecrypt* self, GstEvent* event)
 {
     const GstStructure* structure = gst_event_get_structure(event);
-    if (!gst_structure_has_name(structure, "drm-session"))
-        return false;
 
-    GUniqueOutPtr<char> temporarySession;
-    gst_structure_get(structure, "session", G_TYPE_STRING, &temporarySession.outPtr(), nullptr);
-    WebKitOpenCDMDecryptPrivate* priv = GST_WEBKIT_OPENCDM_DECRYPT_GET_PRIVATE(WEBKIT_OPENCDM_DECRYPT(self));
-    ASSERT(temporarySession);
+    if (gst_structure_has_name(structure, "drm-cipher"))
+    {
+      const GValue* value = gst_structure_get_value(structure,"key");
+      GST_TRACE("drm-cipher structure has key value %s", value);
+    }
+    else if (gst_structure_has_name(structure, "drm-session"))
+    {
+      GST_INFO_OBJECT(self, "drm-session event received\n");
+      GUniqueOutPtr<char> temporarySession;
+      gst_structure_get(structure, "session", G_TYPE_STRING, &temporarySession.outPtr(), nullptr);
+      WebKitOpenCDMDecryptPrivate* priv = GST_WEBKIT_OPENCDM_DECRYPT_GET_PRIVATE(WEBKIT_OPENCDM_DECRYPT(self));
+      ASSERT(temporarySession);
 
-    if (priv->m_session != temporarySession.get() ) {
+      if (priv->m_session != temporarySession.get() ) 
+      {
         priv->m_session = temporarySession.get();
         GST_INFO_OBJECT(self, "selecting session %s", priv->m_session.utf8().data());
-        priv->m_openCdm = std::make_unique<media::OpenCdm>();
-        priv->m_openCdm->SelectSession(priv->m_session.utf8().data());
-    } else
-        GST_INFO_OBJECT(self, "session %s already selected", priv->m_session.utf8().data());
+        if (!priv->m_openCdm)
+            priv->m_openCdm = std::unique_ptr<media::OpenCdm>(WebCore::CDMPrivateOpenCDM::getOpenCdmInstance());
+        if (priv->m_openCdm)
+            priv->m_openCdm->SelectSession(priv->m_session.utf8().data());
+      } else
+          GST_INFO_OBJECT(self, "session %s already selected", priv->m_session.utf8().data());
+    }
+    else
+        return false;
 
     return true;
 }
@@ -161,14 +173,19 @@ static gboolean webKitMediaOpenCDMDecryptorDecrypt(WebKitMediaCommonEncryptionDe
         }
         gst_byte_reader_set_pos(reader.get(), 0);
 
-        // Decrypt cipher.
-        if (errorCode = priv->m_openCdm->Decrypt(holdEncryptedData.get(), static_cast<uint32_t>(totalEncrypted),
+        if (priv->m_openCdm) 
+        {
+          // Decrypt cipher.
+          if (errorCode = priv->m_openCdm->Decrypt(holdEncryptedData.get(), static_cast<uint32_t>(totalEncrypted),
             ivMap.data, static_cast<uint32_t>(ivMap.size))) {
             GST_WARNING_OBJECT(self, "ERROR - packet decryption failed [%d]", errorCode);
             gst_buffer_unmap(subSamplesBuffer, &subSamplesMap);
             returnValue = false;
             goto beach;
+          }
         }
+        else
+            GST_ERROR_OBJECT(self, "ERROR - m_openCdm is NULL\n");
 
         // Re-build sub-sample data.
         index = 0;
@@ -185,6 +202,8 @@ static gboolean webKitMediaOpenCDMDecryptorDecrypt(WebKitMediaCommonEncryptionDe
 
         gst_buffer_unmap(subSamplesBuffer, &subSamplesMap);
     } else {
+       if (priv->m_openCdm) 
+       {
         // Decrypt cipher.
         if (errorCode = priv->m_openCdm->Decrypt(map.data, static_cast<uint32_t>(map.size),
             ivMap.data, static_cast<uint32_t>(ivMap.size))) {
@@ -192,6 +211,9 @@ static gboolean webKitMediaOpenCDMDecryptorDecrypt(WebKitMediaCommonEncryptionDe
             returnValue = false;
             goto beach;
         }
+       }
+       else
+           GST_ERROR_OBJECT(self, "ERROR - m_openCdm is NULL\n");
     }
 
 beach:
