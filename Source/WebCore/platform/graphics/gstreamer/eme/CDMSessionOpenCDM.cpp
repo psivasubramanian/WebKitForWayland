@@ -42,6 +42,7 @@ namespace WebCore {
 
 CDMSessionOpenCDM::CDMSessionOpenCDM(CDMSessionClient*, media::OpenCdm* openCdm, MediaPlayerPrivateGStreamerBase* playerPrivate, String openCdmKeySystem)
     : m_openCdmSession(openCdm)
+    , m_message()
     , m_playerPrivate(playerPrivate)
     , m_openCdmKeySystem(openCdmKeySystem)
     , m_eKeyState(KeyInit)
@@ -64,10 +65,10 @@ RefPtr<Uint8Array> CDMSessionOpenCDM::generateKeyRequest(const String& mimeType,
     m_sessionId = String::fromUTF8(sessionId.c_str());
 
     unsigned char temporaryUrl[1024] = {'\0'};
-    std::string message;
     int messageLength = 0;
     int destinationUrlLength = 0;
-    int returnValue = m_openCdmSession->GetKeyMessage(message,
+
+    int returnValue = m_openCdmSession->GetKeyMessage(m_message,
         &messageLength, temporaryUrl, &destinationUrlLength);
     if (returnValue || !messageLength || !destinationUrlLength) {
         errorCode = WebKitMediaKeyError::MEDIA_KEYERR_UNKNOWN;
@@ -76,7 +77,7 @@ RefPtr<Uint8Array> CDMSessionOpenCDM::generateKeyRequest(const String& mimeType,
     printf("Key state set to PENDING \n");
     m_eKeyState = KeyPending;
     destinationUrl = String::fromUTF8(temporaryUrl);
-    return Uint8Array::create(reinterpret_cast<unsigned char*>(const_cast<char*>(message.c_str())), messageLength);
+    return Uint8Array::create(reinterpret_cast<unsigned char*>(const_cast<char*>(m_message.c_str())), messageLength);
 }
 
 void CDMSessionOpenCDM::releaseKeys()
@@ -91,7 +92,7 @@ bool CDMSessionOpenCDM::update(Uint8Array* key, RefPtr<Uint8Array>& nextMessage,
     GST_MEMDUMP("License :", key->data(), key->length());
 
     std::string responseMessage;
-    if (m_openCdmSession->Update(key->data(), key->length(), responseMessage)) {
+    if (!m_openCdmSession->Update(key->data(), key->length(), responseMessage)) {
         errorCode = WebKitMediaKeyError::MEDIA_KEYERR_CLIENT;
         m_eKeyState = KeyError;
         return false;
